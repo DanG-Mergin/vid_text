@@ -131,8 +131,9 @@ dmypy.json
 # Files
 *.mp*
 *.wav
-clips/
+clips/*
 *.txt
 
 # Models
 /vosk_models
+/models*

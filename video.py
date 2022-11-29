@@ -1,6 +1,11 @@
 import speech_recognition as sr 
 import moviepy.editor as mp
+
+import re
 # from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
+
+# TODO: move to requirements file
+# pip install SpeechRecognition moviepy
 
 from pathlib import Path, PurePath, PurePosixPath
 import numpy as np
@@ -15,7 +20,7 @@ class Video:
     # clips_dir = "video_clips"
     # clips_dir = ""
     name = "" # file name without extension
-    orig_extension = ""
+    # orig_extension = ""
     clip_ext = "mp4"
     clip_dir = "clips"
     clip = None
@@ -31,7 +36,7 @@ class Video:
     def __parse_path(self, path):
         p = PurePath(path)
         self.name = p.stem
-        self.orig_extension = p.suffix
+        # self.orig_extension = p.suffix
 
     def get_clip(self, path = path):
         # TODO: evaluate impact of keeping clip object in memory.. it isn't being used here
@@ -43,8 +48,6 @@ class Video:
     def __get_subclip_path(self, start, end, ext):
         ext = ext if ext is not None else self.clip_ext 
         return Path(self.__get_subclip_dir_path(ext)).joinpath(f'{start}_{end}.{ext}')
-    
-        # return Path(Path(__file__).parent).joinpath(self.clip_dir, f'{self.name}_clips', f'{start}_{end}.{self.clip_ext}')
     
     def __get_subclip_dir_path(self, subfold='_clips'):
         return Path(Path(__file__).parent).joinpath(self.clip_dir, f'{self.name}{subfold}')
@@ -61,9 +64,9 @@ class Video:
     def __add_audio_subclip(self, start, end, ext):
         # Path(f'{self.__get_subclip_dir_path(ext)}').mkdir(parents=True, exist_ok=False)
         
-        subclip = mp.AudioFileClip(self.path, nchannels=1).subclip(start, end)
+        subclip = mp.AudioFileClip(self.path).subclip(start, end)
         # ffmpeg params ATOW are for mono audio
-        subclip.write_audiofile(f'{self.__get_subclip_path(start, end, "wav")}', codec='pcm_s32le', ffmpeg_params=["-ac", "1"])
+        subclip.write_audiofile(f'{self.__get_subclip_path(start, end, "wav")}', codec='pcm_s16le', ffmpeg_params=["-ac", "1"])
 
         return subclip
 
@@ -102,62 +105,102 @@ class Transcript:
     text = ""
     raw_t_path = "raw_transcript"
     audio_path = "vid_audio.wav",
-    provider = ""
+    # provider = ""
     
-    def __init__(self, vid_path, provider="google"):
+    def __init__(self, vid_path):
         self.vid = Video(vid_path)
         # self.text = self.transcribe(self.extract_audio(self.vid))
-        self.provider = provider
-        if provider == "google":
+        # self.provider = provider
+        # if provider == "google":
+        #     # split audio up into files below the api threshold
+        #     self.text = self.__split_audio(0, self.vid.duration)
+        # else:
+        #     # get 16000 hz single channel full sized file
+        #     self.text = self.__split_audio()
 
-            # split audio up into files below the api threshold
-            self.text = self.__split_audio(0, self.vid.duration)
 
     # split audio into multiple files for api limits or threading
-    def __split_audio(self, start, end, clip_dur=60):
-        # TODO: this is tightly coupled to the end > durations catch
+    def __split_audio(self, start, end, vid, clip_dur):
         durations = np.arange(start, int(end), clip_dur)
 
-        clip_tr = ""
-
+        # combined_transcript = ""
+        paths = []
         for d in durations:
-            sub_clip_path = self.vid.get_audio_subclip(d, d + clip_dur)
+            # sub_clip_path = vid.get_audio_subclip(d, d + clip_dur)
+            paths.append(vid.get_audio_subclip(d, d + clip_dur))
             # TODO: add asyncio. Beware flask's gotchas as it isn't native async unless you use a specific version
-            transcribed = self.transcribe(sub_clip_path)
-            clip_tr = clip_tr + transcribed
+        #     transcribed = self.transcribe(sub_clip_path)
+        #     combined_transcript = combined_transcript + transcribed
 
-        return clip_tr
+        # return combined_transcript
+        return paths
 
-    def transcribe(self, file_path, provider="google"):
+    def split_audio(self, start, end, vid, clip_dur=60):
+        vid = vid if vid is not None else self.vid
+        audio_paths = self.__split_audio(start, end, vid, clip_dur)
+        return audio_paths
+
+    def __transcribe_coqui(self, file_path):
+        print('-'*50)
+        print('undefined')
+
+    def __transcribe_google(self, file_path):
         recognizer = sr.Recognizer()
         audio = sr.AudioFile(f'{file_path}')
 
         with audio as source:
             audio_file = recognizer.record(source)
-            if self.provider == 'google':
-                try: 
-                    return recognizer.recognize_google(audio_file)
-                except:
-                    print('yeah')
+            return recognizer.recognize_google(audio_file)
 
-    
-    def save_transcript(self, path):
-        with open(f'{path}.txt', mode='w', encoding='utf-8') as file:
-            file.write(self.text)
+
+    def transcribe(self, start, end, clip_dur=60, provider="google"):
+        start = 0 if start is None else start
+        end = self.vid.duration if end is None else end
+        # vid = vid if vid is not None else self.vid
+
+        t = ""
+        transcripts = []
+        audio_paths = self.__split_audio(start, end, self.vid, clip_dur)
+
+        # if provider == "google":
+            # self.text = self.__split_audio(0, self.vid.duration)
+        for p in audio_paths:
+            if provider == "google":
+                res = self.__transcribe_google(p)
+            elif provider == "coqui":
+                res = self.__transcribe_coqui(p)
+            transcripts.append(res)
+            t = t + res
+
+        return (t, transcripts, audio_paths)
+
+    # regex is a compiled re
+    def save(self, path, text, regex=None):
+        text = text if text is not None else self.text
+        
+        with open(f'../{path}.txt', mode='w', encoding='utf-8') as file:
+            if regex is not None:
+                text = regex.sub('', text)
+            file.write(text)
             print(f'saved transript file as {path}.txt')
 
-# extract video stills
+def prep_coqui(vid_path):
+    regex = re.compile(r'[^a-zA-Z\s]')
+    transcript = Transcript(vid_path)
+    transcript_tup = transcript.transcribe(0, 9999999999, clip_dur=15)
+    transcript.save('1_PCA_total', transcript_tup[0])
 
-# integrate timeline with video
-#  - timeline to be generated elsewhere
-
+    for i,p in enumerate(transcript_tup[2]):
+        transcript.save(p, transcript_tup[1][i], regex)
 
 if __name__ == "__main__":
-    # v = Video('section1.mp4')
-    # v.get_subclip(0, 60)
+    prep_coqui('1_PCA.mp4')
+    # v = Video('1_PCA.mp4')
+    # v.get_audio_subclip(0, 99999999999999)
     # v.get_clip()
     
     # t = Transcript(v.get_clip())
     # t = Transcript('section1.mp4')
-    t = Transcript('test.mp4')
-    t.save_transcript("raw_transcript")
+
+    # t = Transcript('1_PCA.mp4')
+    # t.save_transcript("raw_transcript")
