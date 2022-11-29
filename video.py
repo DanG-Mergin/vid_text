@@ -5,7 +5,7 @@ import moviepy.editor as mp
 from pathlib import Path, PurePath, PurePosixPath
 import numpy as np
 
-import asyncio
+# import asyncio
 
 # TODO: inherit from moviepy
 
@@ -60,8 +60,10 @@ class Video:
 
     def __add_audio_subclip(self, start, end, ext):
         # Path(f'{self.__get_subclip_dir_path(ext)}').mkdir(parents=True, exist_ok=False)
-        subclip = mp.AudioFileClip(self.path).subclip(start, end)
-        subclip.write_audiofile(f'{self.__get_subclip_path(start, end, "wav")}')
+        
+        subclip = mp.AudioFileClip(self.path, nchannels=1).subclip(start, end)
+        # ffmpeg params ATOW are for mono audio
+        subclip.write_audiofile(f'{self.__get_subclip_path(start, end, "wav")}', codec='pcm_s32le', ffmpeg_params=["-ac", "1"])
 
         return subclip
 
@@ -72,8 +74,6 @@ class Video:
         if subclip_path.is_file():
             print(f'-- Found {subclip_path}')
             return (mp.VideoFileClip(f'{subclip_path}'), subclip_path)  
-            # return Video(f'{subclip_path}')
-            # return subclip_path
         else: 
             print(f'-- Did not find {subclip_path}')
             self.__add_subclip(start, end)
@@ -98,8 +98,6 @@ class Video:
             print(f'-- Found {subclip_path}')
         return subclip_path
 
-# adapted from https://towardsdatascience.com/extracting-speech-from-video-using-python-f0ec7e312d38
-# TODO: compare mp3 to wav 
 class Transcript:
     text = ""
     raw_t_path = "raw_transcript"
@@ -115,25 +113,6 @@ class Transcript:
             # split audio up into files below the api threshold
             self.text = self.__split_audio(0, self.vid.duration)
 
-
-    # extract audio from video
-    # def extract_audio(self, vid: mp.VideoFileClip, write_file=True):
-    #     if write_file:
-    #         vid.audio.write_audiofile(self.audio_path)
-    #     return self.audio_path
-
-    # async def extract_audio(self, vid: mp.VideoFileClip, write_file=True):
-    #     if write_file:
-    #         if self.provider == "google":
-    #             # split audio up into files below the threshold
-    #             await self.__split_audio()
-
-    # def extract_audio(self, vid: mp.VideoFileClip, write_file=True):
-    #     if write_file:
-    #         if self.provider == "google":
-    #             # split audio up into files below the threshold
-    #             self.__split_audio()
-
     # split audio into multiple files for api limits or threading
     def __split_audio(self, start, end, clip_dur=60):
         # TODO: this is tightly coupled to the end > durations catch
@@ -143,46 +122,12 @@ class Transcript:
 
         for d in durations:
             sub_clip_path = self.vid.get_audio_subclip(d, d + clip_dur)
-            # audio_path = Path.joinpath('audio', f'')
-            # sub_clip[0].audio.write_audiofile(sub_clip[1])
             # TODO: add asyncio. Beware flask's gotchas as it isn't native async unless you use a specific version
-    
-            # await creating the audio file
-            # as files return await google transcription
             transcribed = self.transcribe(sub_clip_path)
             clip_tr = clip_tr + transcribed
-            # self.add_to_transcript(transcribed, 'testing2')
-            # clip_tr = clip_tr + '|' + 'sub_clip_path' + '|' + self.transcribe(sub_clip_path)
-            # put them all back together
 
         return clip_tr
-    # async def __split_audio(self, start, end, clip_dur=60):
-    #     # for(i in range())
-    #     start = start if start is not None else 0
-    #     end = end if end is not None else self.vid.duraton
-    #     durations = np.arange(start, end, clip_dur)
 
-    #     for d in durations:
-    #         sub_clip = await self.vid.get_subclip(d, d + clip_dur)
-    #         # audio_path = Path.joinpath('audio', f'')
-    #         sub_clip[0].audio.write_audiofile(sub_clip[1])
-    #         # TODO: add asyncio. Beware flask's gotchas as it isn't native async unless you use a specific version
-    
-    #         # await creating the audio file
-    #         # as files return await google transcription
-    #         sub_clip_tr = await self.transcribe(sub_clip_path)
-    #         # put them all back together
-
-
-    # async def transcribe(self, file_path, provider="google"):
-    #     recognizer = sr.Recognizer()
-    #     audio = sr.AudioFile(file_path)
-
-    #     with audio as source:
-    #         audio_file = recognizer.record(source)
-    #         if provider == 'google':
-                
-    #             return recognizer.recognize_google(audio_file)
     def transcribe(self, file_path, provider="google"):
         recognizer = sr.Recognizer()
         audio = sr.AudioFile(f'{file_path}')
@@ -194,11 +139,6 @@ class Transcript:
                     return recognizer.recognize_google(audio_file)
                 except:
                     print('yeah')
-
-    # def add_to_transcript(self, text, path):
-    #     with open(f'{path}.txt', mode='w') as file:
-    #         file.write(text)
-    #         print(f'saved transript file as {path}.txt')
 
     
     def save_transcript(self, path):
@@ -218,24 +158,6 @@ if __name__ == "__main__":
     # v.get_clip()
     
     # t = Transcript(v.get_clip())
-    t = Transcript('section1.mp4')
-    # t = Transcript('test.mp4')
+    # t = Transcript('section1.mp4')
+    t = Transcript('test.mp4')
     t.save_transcript("raw_transcript")
-
-
-# num_seconds_video= 52*60
-# print("The video is {} seconds".format(num_seconds_video))
-# l=list(range(0,num_seconds_video+1,60))
-
-# diz={}
-# for i in range(len(l)-1):
-#     ffmpeg_extract_subclip("videorl.mp4", l[i]-2*(l[i]!=0), l[i+1], targetname="chunks/cut{}.mp4".format(i+1))
-#     clip = mp.VideoFileClip(r"chunks/cut{}.mp4".format(i+1)) 
-#     clip.audio.write_audiofile(r"converted/converted{}.wav".format(i+1))
-#     r = sr.Recognizer()
-#     audio = sr.AudioFile("converted/converted{}.wav".format(i+1))
-#     with audio as source:
-#       r.adjust_for_ambient_noise(source)  
-#       audio_file = r.record(source)
-#     result = r.recognize_google(audio_file)
-#     diz['chunk{}'.format(i+1)]=result

@@ -133,3 +133,6 @@ dmypy.json
 *.wav
 clips/
 *.txt
+
+# Models
+/vosk_models
