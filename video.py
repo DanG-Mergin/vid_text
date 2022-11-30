@@ -206,7 +206,9 @@ def build_coqui_df(start, end, clip_dur, name):
     for d in durations:
         name = f'{d}_{d+clip_dur}.wav.txt'
         p = Path(parent_path).joinpath(name)
-        n_bytes = Path(p).stat().st_size
+        # get video file size in bytes
+        vid_p = Path(parent_path).joinpath(name.replace('.txt', ''))
+        n_bytes = Path(vid_p).stat().st_size
 
         with open(p, mode='r') as input:
             text = input.read()
