@@ -7,8 +7,13 @@ import re
 # TODO: move to requirements file
 # pip install SpeechRecognition moviepy
 
-from pathlib import Path, PurePath, PurePosixPath
+from pathlib import Path, PurePath
+
 import numpy as np
+import pandas as pd
+
+import datetime
+
 
 # import asyncio
 
@@ -17,10 +22,7 @@ import numpy as np
 # ingest video
 class Video:
     path = ""
-    # clips_dir = "video_clips"
-    # clips_dir = ""
     name = "" # file name without extension
-    # orig_extension = ""
     clip_ext = "mp4"
     clip_dir = "clips"
     clip = None
@@ -36,7 +38,6 @@ class Video:
     def __parse_path(self, path):
         p = PurePath(path)
         self.name = p.stem
-        # self.orig_extension = p.suffix
 
     def get_clip(self, path = path):
         # TODO: evaluate impact of keeping clip object in memory.. it isn't being used here
@@ -62,11 +63,9 @@ class Video:
         return subclip
 
     def __add_audio_subclip(self, start, end, ext):
-        # Path(f'{self.__get_subclip_dir_path(ext)}').mkdir(parents=True, exist_ok=False)
-        
         subclip = mp.AudioFileClip(self.path).subclip(start, end)
         # ffmpeg params ATOW are for mono audio
-        subclip.write_audiofile(f'{self.__get_subclip_path(start, end, "wav")}', codec='pcm_s16le', ffmpeg_params=["-ac", "1"])
+        subclip.write_audiofile(f'{self.__get_subclip_path(start, end, ext)}', codec='pcm_s16le', ffmpeg_params=["-ac", "1"])
 
         return subclip
 
@@ -104,35 +103,21 @@ class Video:
 class Transcript:
     text = ""
     raw_t_path = "raw_transcript"
-    audio_path = "vid_audio.wav",
-    # provider = ""
-    
+    audio_path = "vid_audio.wav"
+
     def __init__(self, vid_path):
         self.vid = Video(vid_path)
-        # self.text = self.transcribe(self.extract_audio(self.vid))
-        # self.provider = provider
-        # if provider == "google":
-        #     # split audio up into files below the api threshold
-        #     self.text = self.__split_audio(0, self.vid.duration)
-        # else:
-        #     # get 16000 hz single channel full sized file
-        #     self.text = self.__split_audio()
 
 
     # split audio into multiple files for api limits or threading
     def __split_audio(self, start, end, vid, clip_dur):
         durations = np.arange(start, int(end), clip_dur)
 
-        # combined_transcript = ""
         paths = []
         for d in durations:
-            # sub_clip_path = vid.get_audio_subclip(d, d + clip_dur)
             paths.append(vid.get_audio_subclip(d, d + clip_dur))
             # TODO: add asyncio. Beware flask's gotchas as it isn't native async unless you use a specific version
-        #     transcribed = self.transcribe(sub_clip_path)
-        #     combined_transcript = combined_transcript + transcribed
 
-        # return combined_transcript
         return paths
 
     def split_audio(self, start, end, vid, clip_dur=60):
@@ -150,51 +135,102 @@ class Transcript:
 
         with audio as source:
             audio_file = recognizer.record(source)
-            return recognizer.recognize_google(audio_file)
+            try:
+                r = recognizer.recognize_google(audio_file)
+            except:
+                # TODO: this isn't remotely robust
+                # need to track whitespace
+                r = ""
+            return r
 
 
     def transcribe(self, start, end, clip_dur=60, provider="google"):
         start = 0 if start is None else start
-        end = self.vid.duration if end is None else end
+        end_ = self.vid.duration if end is None else end
         # vid = vid if vid is not None else self.vid
 
         t = ""
-        transcripts = []
-        audio_paths = self.__split_audio(start, end, self.vid, clip_dur)
+        transcripts = [] 
+        dead_air = []
+        audio_paths = self.__split_audio(start, end_, self.vid, clip_dur)
 
-        # if provider == "google":
-            # self.text = self.__split_audio(0, self.vid.duration)
         for p in audio_paths:
             if provider == "google":
                 res = self.__transcribe_google(p)
             elif provider == "coqui":
                 res = self.__transcribe_coqui(p)
+            if res == "":
+                dead_air.append(p)
+
             transcripts.append(res)
             t = t + res
 
-        return (t, transcripts, audio_paths)
+        return (t, transcripts, audio_paths, dead_air)
 
     # regex is a compiled re
-    def save(self, path, text, regex=None):
-        text = text if text is not None else self.text
-        
-        with open(f'../{path}.txt', mode='w', encoding='utf-8') as file:
+    def save(self, path, text, regex:re=None):
+        with open(f'{path}.txt', mode='w', encoding='utf-8') as file:
             if regex is not None:
                 text = regex.sub('', text)
             file.write(text)
             print(f'saved transript file as {path}.txt')
 
+# manually run data ingest for coqui model training
 def prep_coqui(vid_path):
     regex = re.compile(r'[^a-zA-Z\s]')
     transcript = Transcript(vid_path)
-    transcript_tup = transcript.transcribe(0, 9999999999, clip_dur=15)
+    transcript_tup = transcript.transcribe(0, end=None, clip_dur=15)
     transcript.save('1_PCA_total', transcript_tup[0])
+
+    if len(transcript_tup[3]) > 0:
+        with open('log.txt', mode='a+') as file:
+            file.write(f'\n{"-"*50}\n{datetime.datetime.now()} ~~ failed remote transcription')
+            for e in transcript_tup[3]:
+                file.write(f'\n\t{datetime.datetime.now()} ~~ Response: {e} ~~ ')
 
     for i,p in enumerate(transcript_tup[2]):
         transcript.save(p, transcript_tup[1][i], regex)
 
+    
+# run after manual labeling for coqui training
+def build_coqui_df(start, end, clip_dur, name):
+    realpha = re.compile(r'[^a-zA-Z\s]')
+    rewhtspc = re.compile(r'\s+')
+
+    wav_filename = []
+    wav_filesize = []
+    transcript = []
+    durations = np.arange(start, int(end), clip_dur)
+
+    parent_path = Path(Path(__file__).parent).joinpath('clips', name)
+    for d in durations:
+        name = f'{d}_{d+clip_dur}.wav.txt'
+        p = Path(parent_path).joinpath(name)
+        n_bytes = Path(p).stat().st_size
+
+        with open(p, mode='r') as input:
+            text = input.read()
+        with open(p, mode='w') as output:
+            text = realpha.sub('', text).lower()
+            text = rewhtspc.sub(' ', text)
+            output.write(text)
+
+        wav_filename.append(name)
+        wav_filesize.append(n_bytes)
+        transcript.append(text)
+    
+    df = pd.DataFrame({'wav_filename': wav_filename, 'wav_filesize': wav_filesize, 'transcript': transcript})
+    print(df.head())
+    df.to_csv(f'coqui_train_PCA_1_{start}_{end}', sep='\t', encoding='utf-8')
+    return df
+        
+        
+
+
+
 if __name__ == "__main__":
-    prep_coqui('1_PCA.mp4')
+    # prep_coqui('1_PCA.mp4')
+    cq_df = build_coqui_df(0, 1380, 15, '1_PCAwav')
     # v = Video('1_PCA.mp4')
     # v.get_audio_subclip(0, 99999999999999)
     # v.get_clip()
