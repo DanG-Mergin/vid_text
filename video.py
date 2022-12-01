@@ -223,7 +223,13 @@ def build_coqui_df(start, end, clip_dur, name):
     
     df = pd.DataFrame({'wav_filename': wav_filename, 'wav_filesize': wav_filesize, 'transcript': transcript})
     print(df.head())
-    df.to_csv(f'coqui_train_PCA_1_{start}_{end}', sep='\t', encoding='utf-8')
+
+    df.to_csv(f'coqui_train_PCA_1_{start}_{end}', sep=',', encoding='utf-8')
+    # there is one extra comma in the header... hacky fix
+
+    with open(f'coqui_train_PCA_1_{start}_{end}', mode='r') as input:
+        text = input.read()
+    
     return df
         
         
