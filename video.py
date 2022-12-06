@@ -22,6 +22,9 @@ import pytesseract as pt
 import nltk # pip install nltk
 from nltk.corpus import stopwords 
 nltk.download('stopwords')
+from nltk.collocations import TrigramCollocationFinder, BigramCollocationFinder
+trigram_measures = nltk.collocations.TrigramAssocMeasures()
+bigram_measures = nltk.collocations.BigramAssocMeasures()
 
 import timeit
 
@@ -205,31 +208,51 @@ class Transcript:
             print(f'saved transript file as {path}.txt')
 
 def remove_stop_words(words):
-  stops = set(stopwords.words("english")) 
-  return ' '.join([w for w in words.split(' ') if not w in stops])
+    # TODO: get proper dictionaries
+    stops = set(stopwords.words("english")) 
+    return ' '.join([w for w in words.split(' ') if not w in stops])
+
+def has_flagged_word(words, threshold=2):
+    # TODO: get proper dictionaries and combine at init
+    extensions = {'.pptx', '.ppt', '.odp', '.jpg', '.png', '.svg', '.doc', '.docx', 'pptx', 'ppt', 'odp', 'jpg', 'png', 'svg', 'doc', 'docx'}
+    interface = {'file', 'home', 'search', 'play', 'bookmarks', 'bookmark', 'save', 'load', 'powerpoint', 'slides', 'slide', 'slideshow', 'insert', 'record', 'view', 'transitions', 'animations', 'endnote', 'share', 'help', 'endnote'}
+    extensions.update(interface)
+
+    for w in words.split(' '):
+        if w.lower() in extensions:
+            threshold -= 1
+            if threshold <= 0:
+                return True
+    return False
+
+def has_flagged_symbol(words):
+    symbols = {'©', '0xC2 0xA9', 'U+0040', '@', '0x40'}
+    for sym in symbols:
+        if re.search(sym, words):
+            return True  
+    return False
 
 # expects string field not lists
-# def remove_non_alpha(document):
-#   regex = re.compile(r'[^a-zA-Z]')
-#   return df_in[col_name].apply(lambda x: regex.sub(' ', x))
-# def get_slide_headers():
+def remove_non_alpha(document):
+    regex = re.compile(r'[^a-zA-Z]')
+    return regex.sub(' ', document)
         
 
-def get_text_from_frames(vid_path:str, start:float, end:float):
+def get_text_from_frames(vid_path:str, start:float, end:float=None):
     # vid.iter_frames gets image arrays
     # vid.get_frame returns np array at time t
     # save_frame saves a clip to image file at time t
     # write_images_sequence: writes clip to series of image files
     vid = Video(vid_path)    
-    end_ = vid.duration if end is None else end
-    frames = vid.get_frames(start, end, fpm=2)
+    end = vid.duration if end is None else end
+    frames_iter = vid.get_frames(start, end, fpm=2)
 
     # path to tesseract.exe
     pt.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
     
-    def __get_text(frames:Iterator):
+    def __get_text(frames_iter:Iterator):
         text = []
-        for f in frames:
+        for f in frames_iter:
             print(np.shape(f[1]))
             # Note that without getting times it would be just f not a tuple
             t = pt.image_to_string(f[1])
@@ -237,7 +260,7 @@ def get_text_from_frames(vid_path:str, start:float, end:float):
             text.append(t)
         return text
         
-    text = __get_text(frames)
+    text = __get_text(frames_iter)
     return text
 
 def get_only_english(document):
@@ -256,11 +279,51 @@ def get_hotwords(corpus):
 
     # remove names???  
     # remove stop words as they should already be accounted for
+def get_collocations(corpus):
+    tri_finder = TrigramCollocationFinder.from_words(corpus)
+    # tri_finder.apply_freq_filter(3)
+    # t = tri_finder.nbest(trigram_measures.pmi, 20)
 
-def clean_text(corpus):
-    # TODO: this should probably use a generator with a save file
-    for doc in corpus:
-        print('hi')
+    bi_finder = BigramCollocationFinder.from_words(corpus)
+    # bi_finder.apply_freq_filter(2)
+    # b = bi_finder.nbest(bigram_measures.pmi, 20)
+
+    # tri_finder = TrigramCollocationFinder.from_words(corpus)
+    # tri_finder.apply_freq_filter(3)
+    t = tri_finder.nbest(trigram_measures.likelihood_ratio, 20)
+
+    # bi_finder = BigramCollocationFinder.from_words(corpus)
+    # bi_finder.apply_freq_filter(2)
+    b = bi_finder.nbest(bigram_measures.likelihood_ratio, 20)
+
+    return b
+
+def remove_words_by_length(doc, min=3):
+    return ' '.join([w for w in doc.split(' ') if len(w) >= min])
+
+def get_topics(corpus):
+    corpus_list = [re.sub(r'\n+', '\n', d).split('\n') for d in corpus if len(d)>0]
+
+    # removelines with words specific to user interfaces, powerpoint, slides, 
+    corpus_list = [[line for line in doc if not has_flagged_word(remove_non_alpha(line), 1) and not has_flagged_symbol(line)] for doc in corpus_list]
+    
+    first_five = [d[0:10] for d in corpus_list]
+    print(first_five)
+
+    # find n-grams/collocations
+    all_slides = remove_words_by_length(remove_stop_words(remove_non_alpha('.'.join([' '.join(d) for d in corpus_list])))).lower()
+
+    topics = get_collocations(all_slides.split(' '))
+
+    # find frequency
+    return topics
+
+
+# def clean_text(corpus):
+#     # TODO: this should probably use a generator with a save file
+#     # for doc in corpus:
+#     #     print('hi')
+#     cor = [re.sub(r'\n+', '\n', d) for d in corpus if len(d)>0]
 
 
 # manually run data ingest for coqui model training
@@ -341,13 +404,14 @@ if __name__ == "__main__":
     # prep_coqui('1_PCA.mp4')
     # cq_df = build_coqui_df(0, 1380, 15, '1_PCAwav')
     
-    bleh = get_text_from_frames('1_PCA.mp4',0)
-    pd.DataFrame({'bleh': bleh}).to_pickle('./img_to_txt_PCA_full.pkl')
+    # bleh = get_text_from_frames('1_PCA.mp4',0)
+    # pd.DataFrame({'bleh': bleh}).to_pickle('./img_to_txt_PCA_full.pkl')
 
-    # bleh = pd.read_pickle('./img_to_txt_PCA_full.pkl')
-    # print(bleh['bleh'])
-    # print(get_hotwords(bleh['bleh']))
-    
+    bleh = pd.read_pickle('./img_to_txt_PCA_full.pkl')
+    print(bleh['bleh'])
+    print(get_hotwords(bleh['bleh']))
+    print(get_topics(bleh['bleh']))
+
     # print(bleh)
 
     # v = Video('1_PCA.mp4')
