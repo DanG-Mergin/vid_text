@@ -1,0 +1,69 @@
+WER: 0.964286, CER: 0.703488, loss: 477.070404
+ - wav: file://stt-data/models/coqui/PCAwav/1260_1275.wav
+ - src: "we say theres no pattern this is for twodimensional cases so we can actually mathematically define it that the correlation coefficient between two random variables x and y "
+ - res: "rrs a is  o rsss   mnin l  ss an in  a      in    rr  n  ooon     rran o  orrr lll a sn o   "
+--------------------------------------------------------------------------------
+WER: 0.968750, CER: 0.695906, loss: 443.762939
+ - wav: file://stt-data/models/coqui/PCAwav/945_960.wav
+ - src: "dimensional space even though we had all these properties on the left side thats what were trying to do now what are the attributes of the space that wed like to preserve "
+ - res: "   mes llss s  in  a  e rraes  ss  o r    r n  a n     tnisssaes the el  l   rrssr"
+--------------------------------------------------------------------------------
+WER: 0.969697, CER: 0.742138, loss: 454.060669
+ - wav: file://stt-data/models/coqui/PCAwav/555_570.wav
+ - src: "feel free to use the mics or type or whatever works for you so maybe the second part of the question why would we need pca that i can answer yeah sure alright "
+ - res: " ren e is ho    trrere or r  sn an     ee      orrr"
+--------------------------------------------------------------------------------
+Median WER:
+--------------------------------------------------------------------------------
+WER: 1.000000, CER: 0.698529, loss: 753.030334
+ - wav: file://stt-data/models/coqui/PCAwav/270_285.wav
+ - src: "so no questions to start off thats great i have a bunch of slides as you can see theyre going to focus on linear algebra review im actually not going to go through them tonight im just going to check them uh but in they talked about what linear algebra is which is matrix "
+ - res: "      sorr   rrran at    st s  anssar  rr  ossn lin    rrrrr     ae   n i   it i in n  tan s ae     t o   wl   en r ral  o rrres oe sss ae "
+--------------------------------------------------------------------------------
+WER: 1.000000, CER: 0.735632, loss: 730.837341
+ - wav: file://stt-data/models/coqui/PCAwav/165_180.wav
+ - src: "im working on azure backend solutions your back and solutions essentially just making sure theres no global outages or anything so the clouds always online im based in atlanta and this is my first semester being a tf for this class so im very excited thank you "
+ - res: " r    s  ans  nn sss eei     aes an l n  sr ut   as   n aessn    oes ss h s  aesss ll on r es  r  on"
+--------------------------------------------------------------------------------
+WER: 1.000000, CER: 0.663830, loss: 615.264893
+ - wav: file://stt-data/models/coqui/PCAwav/90_105.wav
+ - src: "my name is peter henstock i am your tour guide for this course its a cultural question of what to call me but i usually go by professor henstock dr henstock professor or just peter and i find that people use different things depending "
+ - res: "ann s aern an eerrorr    rssss ol ro rn o         rr raes or aan     rrn s rrr sr  ss er an    n h e ol  s tr ron tn eis sn tatin o "
+--------------------------------------------------------------------------------
+WER: 1.000000, CER: 0.669456, loss: 611.506470
+ - wav: file://stt-data/models/coqui/PCAwav/675_690.wav
+ - src: "into something thats more manageable that we can leverage more effectively and so were compressing things from higher dimensional space into a lower dimensional space why do we want to do that other than improving models any other reasons "
+ - res: "ad  s in r aan oll en  rerat an s rrrr rrsn in s ro r r n lss ese tol rr  mnes l s ass re     t t a         oro  en   o ll  n   re e  "
+--------------------------------------------------------------------------------
+WER: 1.000000, CER: 0.666667, loss: 576.216492
+ - wav: file://stt-data/models/coqui/PCAwav/1230_1245.wav
+ - src: "cause theyre corelated right but if i made it well well go to the next slide so as we stated these are negatively correlated because the increase of one variable corresponds to a decrease of the other "
+ - res: "orr  t i n  i ae    ih nar t in in sln  l as   ss ta in   ae rr a in  rr  a n esss  res    rrrol  is s orers   erreso  a  r r an thi l "
+--------------------------------------------------------------------------------
+Worst WER:
+--------------------------------------------------------------------------------
+WER: 1.000000, CER: 0.689189, loss: 393.754913
+ - wav: file://stt-data/models/coqui/PCAwav/1140_1155.wav
+ - src: "and the displacement from it so thats one of the key ideas of the pca another question we can ask is correlation are these points correlated or not "
+ - res: "ossann  s n on  as  ee a t   in aaes esorr  rt s in  sorl  rrrrr  "
+--------------------------------------------------------------------------------
+WER: 1.000000, CER: 0.671053, loss: 393.092194
+ - wav: file://stt-data/models/coqui/PCAwav/390_405.wav
+ - src: "well talk more about ai in general big picture where is it wheres it going and those kinds of things and hopefully have a healthy discussion alright so "
+ - res: " or      an rrwt err  rrr   an thesns  in e sn ll aa al tie tinss aa oe "
+--------------------------------------------------------------------------------
+WER: 1.000000, CER: 0.657143, loss: 340.903961
+ - wav: file://stt-data/models/coqui/PCAwav/960_975.wav
+ - src: "we can easily just kind of throw things into a two dimensional space but what properties do we want to have in this lower dimensional space "
+ - res: "e on aes l sono oe rr t tinn sinl      onsl      rrrr    n a  es  r areslls   "
+--------------------------------------------------------------------------------
+WER: 1.103448, CER: 0.668571, loss: 512.588989
+ - wav: file://stt-data/models/coqui/PCAwav/0_15.wav
+ - src: "welcome welcome to cseries advanced machine learning state of mining and artificial intelligence thank you all for being here looks like we have ah maybe about half the class "
+ - res: "wll oo  oeone sssss ninn     a   s  e  hrer in  a in n n  o r rees  n   on    s  oe  rr n eer o r lle e a e   e  a     "
+--------------------------------------------------------------------------------
+WER: 1.214286, CER: 0.666667, loss: 213.475937
+ - wav: file://stt-data/models/coqui/PCAwav/1215_1230.wav
+ - src: "we assume that its uncorrelated if its uncorrelated that mean its independent or not"
+ - res: "  sss   t  nn or n it s oe rn e ie is s een  nn   too an "
+--------------------------------------------------------------------------------
