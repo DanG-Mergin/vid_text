@@ -1,3 +1,38 @@
+--------------------------------------------------------------------------------
+Epoch 59 |   Training | Elapsed Time: 0:00:55 | Steps: 32 | Loss: 220.564649
+Epoch 59 | Validation | Elapsed Time: 0:00:00 | Steps: 0 | Loss: 0.000000 | Dataset: stt-data/models/coqui/PCAwav/dev.csEpoch 59 | Validation | Elapsed Time: 0:00:02 | Steps: 1 | Loss: 662.458130 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:04 | Steps: 2 | Loss: 594.849518 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:07 | Steps: 3 | Loss: 617.348450 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:09 | Steps: 4 | Loss: 607.937607 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:11 | Steps: 5 | Loss: 594.415137 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:14 | Steps: 6 | Loss: 603.225647 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:16 | Steps: 7 | Loss: 604.003741 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:18 | Steps: 8 | Loss: 610.938339 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:21 | Steps: 9 | Loss: 597.991764 | Dataset: stt-data/models/coqui/PCAwav/dev.Epoch 59 | Validation | Elapsed Time: 0:00:23 | Steps: 10 | Loss: 604.576639 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:26 | Steps: 11 | Loss: 597.083443 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:28 | Steps: 12 | Loss: 595.889773 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:30 | Steps: 13 | Loss: 584.033252 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:32 | Steps: 14 | Loss: 582.197791 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:35 | Steps: 15 | Loss: 588.629734 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:37 | Steps: 16 | Loss: 574.829174 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:39 | Steps: 17 | Loss: 571.533462 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:42 | Steps: 18 | Loss: 572.592567 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:44 | Steps: 19 | Loss: 566.263050 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:46 | Steps: 20 | Loss: 574.096980 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:48 | Steps: 21 | Loss: 575.304047 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:51 | Steps: 22 | Loss: 573.261981 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:53 | Steps: 23 | Loss: 573.425021 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:55 | Steps: 24 | Loss: 568.774810 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:00:58 | Steps: 25 | Loss: 573.032831 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:01:00 | Steps: 26 | Loss: 571.520201 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:01:02 | Steps: 27 | Loss: 568.960007 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:01:04 | Steps: 28 | Loss: 575.275224 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:01:07 | Steps: 29 | Loss: 577.976736 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:01:09 | Steps: 30 | Loss: 578.758294 | Dataset: stt-data/models/coqui/PCAwav/devEpoch 59 | Validation | Elapsed Time: 0:01:09 | Steps: 30 | Loss: 578.758294 | Dataset: stt-data/models/coqui/PCAwav/dev.csv
+I Early stop triggered as the loss did not improve the last 25 epochs
+I FINISHED optimization in 2:06:41.230803
+I Loading best validating checkpoint from stt-data/models/coqui/checkpoints/original2/coqui-stt-1.0.0-checkpoint/best_dev-3665001
+I Loading variable from checkpoint: cudnn_lstm/rnn/multi_rnn_cell/cell_0/cudnn_compatible_lstm_cell/bias
+I Loading variable from checkpoint: cudnn_lstm/rnn/multi_rnn_cell/cell_0/cudnn_compatible_lstm_cell/kernel
+I Loading variable from checkpoint: global_step
+I Loading variable from checkpoint: layer_1/bias
+I Loading variable from checkpoint: layer_1/weights
+I Loading variable from checkpoint: layer_2/bias
+I Loading variable from checkpoint: layer_2/weights
+I Loading variable from checkpoint: layer_3/bias
+I Loading variable from checkpoint: layer_3/weights
+I Loading variable from checkpoint: layer_5/bias
+I Loading variable from checkpoint: layer_5/weights
+I Loading variable from checkpoint: layer_6/bias
+I Loading variable from checkpoint: layer_6/weights
+Testing model on stt-data/models/coqui/PCAwav/test.csv
+Test epoch | Steps: 30 | Elapsed Time: 0:12:53
+Test on stt-data/models/coqui/PCAwav/test.csv - WER: 0.992825, CER: 0.685316, loss: 541.696655
+--------------------------------------------------------------------------------
+Best WER:
+--------------------------------------------------------------------------------
+WER: 0.931034, CER: 0.677852, loss: 424.105255
+ - wav: file://stt-data/models/coqui/PCAwav/705_720.wav
+ - src: "have the most influence on a response yes thats a loaded response but yes well talk about that some more what about you reduce the size of your data "
+ - res: "a  a es  s t o loe    lnes   t a well l  t t  ner  ata  tl     en   sssss rr in lll  "
+--------------------------------------------------------------------------------
+WER: 0.962963, CER: 0.682310, loss: 727.728638
+ - wav: file://stt-data/models/coqui/PCAwav/60_75.wav
+ - src: "officially its harvard policy to turn your cameras on you know i realize the irony that i dont have my camera on but nonetheless im looking forward to this and ill be having my camera on probably in a couple weeks so thank you very much for those who have turned on the camera "
+ - res: "   s rros t  rnr aa res an arre  s  a rn ne     on  a rrr n l ass en or         aer rr a ollo e e oe rr   on tht os o e r rrn   et ar "
+--------------------------------------------------------------------------------
 WER: 0.964286, CER: 0.703488, loss: 477.070404
  - wav: file://stt-data/models/coqui/PCAwav/1260_1275.wav
  - src: "we say theres no pattern this is for twodimensional cases so we can actually mathematically define it that the correlation coefficient between two random variables x and y "
@@ -67,3 +102,19 @@ WER: 1.214286, CER: 0.666667, loss: 213.475937
  - src: "we assume that its uncorrelated if its uncorrelated that mean its independent or not"
  - res: "  sss   t  nn or n it s oe rn e ie is s een  nn   too an "
 --------------------------------------------------------------------------------
+I Exporting the model...
+I Loading best validating checkpoint from stt-data/models/coqui/checkpoints/original2/coqui-stt-1.0.0-checkpoint/best_dev-3665001
+I Loading variable from checkpoint: cudnn_lstm/rnn/multi_rnn_cell/cell_0/cudnn_compatible_lstm_cell/bias
+I Loading variable from checkpoint: cudnn_lstm/rnn/multi_rnn_cell/cell_0/cudnn_compatible_lstm_cell/kernel
+I Loading variable from checkpoint: layer_1/bias
+I Loading variable from checkpoint: layer_1/weights
+I Loading variable from checkpoint: layer_2/bias
+I Loading variable from checkpoint: layer_2/weights
+I Loading variable from checkpoint: layer_3/bias
+I Loading variable from checkpoint: layer_3/weights
+I Loading variable from checkpoint: layer_5/bias
+I Loading variable from checkpoint: layer_5/weights
+I Loading variable from checkpoint: layer_6/bias
+I Loading variable from checkpoint: layer_6/weights
+I Models exported at stt-data/coqui/docker/exported-model
+I Model metadata file saved to stt-data/coqui/docker/exported-model/author_model_0.0.1.md. Before submitting the exported model for publishing make sure all information in the metadata file is correct, and complete the URL fields.
