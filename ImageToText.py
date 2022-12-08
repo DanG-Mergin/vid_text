@@ -13,6 +13,7 @@ bigram_measures = nltk.collocations.BigramAssocMeasures()
 
 import wikipedia #!pip install wikipedia
 import datetime
+from random import sample
 
 # TODO: clean this circular mess up!
 from video import Video
@@ -126,10 +127,23 @@ def get_topics(corpus:list)-> dict:
                     # topic_count_dict[c]['count'] = 1
     return topic_count_dict
 
+def get_topics_over_mean(topics:dict)->dict:
+    total = 0
+    for key in topics:
+        total += topics[key]['count']
+
+    mean = total / len(topics)
+
+    t50 = {}
+    for key in topics:
+        if topics[key]['count'] >= mean:
+            t50[key] = topics[key]
+    return t50
+
 # n_topics is how many of the top counted topics to use
 # n_search is how many of those topics to expand search on
 # n_expand is how much that search should expand to related items
-def get_wiki_articles(topics:dict, n_topics:int=10, n_search:int=10, n_expand=3)->Iterator:
+def get_wiki_articles(topics:dict, n_topics:int=5, n_search:int=5, n_expand=3)->Iterator:
     # throttling so we aren't blocked
     wikipedia.set_rate_limiting(rate_limit=True, min_wait=datetime.timedelta(0, 0, 1000000))
     n_t = n_topics if n_topics <= len(topics) else len(topics.keys)
@@ -188,6 +202,11 @@ def to_sentences(article:str)->list:
         word_count = 0
     return new_sentences
 
+def sample_output(path, n_samples):
+    with open(path, mode='r') as input:
+        text = input.readlines()
+        return sample(text, n_samples)
+
 # takes a video path (such as myvid.mp4), extracts text from the video, and builds a scorer of single line 
 # - sentences it thinks are related to the video 
 def build_scorer(vid_path:str):
@@ -199,11 +218,16 @@ def build_scorer(vid_path:str):
         text_df.to_pickle(f'./img_to_txt_{vid_path}.pkl')
 
     t = get_topics(text_df['text'])
+    t = get_topics_over_mean(t)
     wikis = get_wiki_articles(t)
+    outpath = f'{vid_path}_sentences.txt'
 
     for a in wikis:
         if len(a) > 0: 
-            with open(f'{vid_path}_sentences.txt', mode='a+', encoding='utf-8') as file:
+            with open(outpath, mode='a+', encoding='utf-8') as file:
                 sentences = to_sentences(a) 
                 for s in sentences:
                     file.write(f'\n{s}')
+
+
+    print(f'sample output is {sample_output(outpath, 10)}')

@@ -53,7 +53,6 @@ class Transcript:
                 r = ""
             return r
 
-
     def transcribe(self, start, end, clip_dur=60, provider="google"):
         start = 0 if start is None else start
         end_ = self.vid.duration if end is None else end
@@ -136,8 +135,8 @@ def build_coqui_df(start, end, clip_dur, name):
     df.to_csv(f'coqui_train_PCA_1_{start}_{end}', sep=',', encoding='utf-8')
     # there is one extra comma in the header... hacky fix
 
-    with open(f'coqui_train_PCA_1_{start}_{end}', mode='r') as input:
-        text = input.read()
+    # with open(f'coqui_train_PCA_1_{start}_{end}', mode='r') as input:
+    #     text = input.read()
     
     return df
         
