@@ -19,7 +19,13 @@ import wikipedia #!pip install wikipedia
 import datetime
 from random import sample
 
-# TODO: clean this circular mess up!
+import spacy
+# python -m spacy download en_core_web_lg
+import en_core_web_lg
+
+# pip install memoization
+from memoization import cached 
+
 from video import Video
 
 # import timeit
@@ -80,38 +86,43 @@ def get_text_from_frames(vid_path:str, start:float, end:float=None):
     text = __get_text(frames_iter)
     return text
 
-# def get_tags(corpus):
-    
-# limiter allows us to use annealing and avoid oversampling
-def get_collocations(corpus:list, n:int=40, collocation_results_coef:float=0.01)->list[(str,str)]:
-    # n = int(collocation_results_coef*len(corpus))
+def filter_by_similarity(topics:list[str], thresh_low:float=0.88, thresh_high:float=1.0, verbose:bool=True)->list[str]:
+    nlp = spacy.load("en_core_web_lg")
+    topic_corpus = get_wiki_content(topics)
+    # comparing the new topics against the existing set
+    # searched_corpus = ' '.join(get_wiki_content([t for t in searched]))
+    # corpus_vec = nlp(searched_corpus)
+    corpus_vec = nlp(' '.join(get_wiki_content([t for t in topics])))
+    passed = []
+    failed = []
+
+    # TODO: compare vectors instead of reprocessing every time
+    for i, doc in enumerate(nlp.pipe(topic_corpus)):
+        similarity = doc.similarity(corpus_vec)
+        if similarity >= thresh_low and similarity <= thresh_high:
+            passed.append((topics[i], similarity))
+        else:
+            failed.append((topics[i], similarity))
+    if verbose:
+        for f in failed:
+            print(f'failed threshold: {f[0]} score = {f[1]}')
+        for p in passed:
+            print(f'passed threshold: {p[0]} score = {p[1]}')
+
+    return [p[0] for p in passed]
+
+def get_collocations(corpus:list, n_collocs:int=3)->list[(str,str)]:
     if type(corpus) == str:
         corpus = corpus.split(' ')
-
-    # tri_finder = TrigramCollocationFinder.from_words(corpus)
-    # tri_finder.apply_freq_filter(3)
-    # t = tri_finder.nbest(trigram_measures.pmi, 20)
+    tri_finder = TrigramCollocationFinder.from_words(corpus)
+    t = tri_finder.nbest(trigram_measures.likelihood_ratio, n_collocs)
 
     bi_finder = BigramCollocationFinder.from_words(corpus)
-    # scored = bi_finder.score_ngrams(bigram_measures.raw_freq)
-    # scored = sorted(bigram for bigram, score in scored)
-
-    # tagged = nltk.pos_tag(corpus)
-    # bi_finder.apply_freq_filter(2)
-    # b = bi_finder.nbest(bigram_measures.pmi, 20)
-
-    # tri_finder = TrigramCollocationFinder.from_words(corpus)
-    # tri_finder.apply_freq_filter(3)
-    # t = tri_finder.nbest(trigram_measures.likelihood_ratio, 20)
-
-    # bi_finder = BigramCollocationFinder.from_words(corpus)
-    # bi_finder.apply_freq_filter(2)
-    b = bi_finder.nbest(bigram_measures.likelihood_ratio, n)
-
-    # t3 = tri_finder.nbest(trigram_measures.poisson_stirling, 20)
-    # b3 = bi_finder.nbest(bigram_measures.poisson_stirling, 20)
+    b = bi_finder.nbest(bigram_measures.likelihood_ratio, n_collocs)
 
     # TODO: stem results and remove duplicates
+    t
+    # TODO: add more effective document similarity comparison/annealing
 
     return b
 
@@ -125,7 +136,7 @@ def remove_words_by_length(doc:str, min:int=3):
 # - what we want to identify the most likely body of text
 # TODO: add a little image processing or rely on tesseract api to identify large text
 # - for more precise header identification
-def get_topics(corpus:list)-> dict:
+def get_topics_from_ocr_text(corpus:list)-> dict:
     corpus_list = [re.sub(r'\n+', '\n', d).split('\n') for d in corpus if len(d)>0]
 
     # removelines with words specific to user interfaces, powerpoint, slides, 
@@ -133,8 +144,8 @@ def get_topics(corpus:list)-> dict:
     
     # find n-grams/collocations
     all_slides = remove_words_by_length(remove_stop_words(remove_non_alpha('.'.join([' '.join(d) for d in corpus_list])))).lower()
-    collocs = get_collocations(all_slides.split(' '))
-
+    collocs = get_collocations(all_slides.split(' '), n_collocs=40)
+    
     # compare against sentences from the top of the image (favoring topic headings and sub headings)
     topic_count_dict = {}
     for c in collocs: 
@@ -159,40 +170,8 @@ def get_topics_over_mean(topics:dict)->dict:
             t50[key] = topics[key]
     return t50
 
-# n_topics is how many of the top counted topics to use
-# n_search is how many of those topics to expand search on
-# n_expand is how much that search should expand to related items
-def get_wiki_articles(topics:dict, n_topics:int=10, n_search:int=10, n_expand=3)->Iterator:
-    # throttling so we aren't blocked
-    wikipedia.set_rate_limiting(rate_limit=True, min_wait=datetime.timedelta(0, 0, 1000000))
-    n_t = n_topics if n_topics <= len(topics) else len(topics.keys)
-    s = sorted(topics, key=lambda x: topics[x]['count'], reverse=True)[:n_t]
-    search_terms = [' '.join(terms).lower() for terms in s]
-
-    # create a set of related ideas according to wikipedia
-    # wikipedia.search('matrix dimensions', results = 5, suggestion = True) 
-    # yields ['Confusion matrix', 'Rotation matrix', 'Matrix norm', 'Covariance matrix', 'Sparse matrix'] 
-    search_set = set(search_terms)
-    print(f'pre expanded search set {search_set} for wikipedia')
-    for term in search_terms[0:n_search]:
-        search_set.update([x.lower() for x in wikipedia.search(term, results=n_expand)])
-    
-    # make sure we have at least one result for the terms we arent expanding search on
-    for term in search_terms[n_search:]:
-        search_set.update([x.lower() for x in wikipedia.search(term, results=1)])
-
-    print(f'Expanded search set {search_set} for wikipedia')
-    for t in search_set:
-        try:
-            response = wikipedia.page(t)
-            # yield response.content
-            yield response
-        except:
-            print(f'no wiki for {t}')
-            # yield ''
-            yield {'content': '', 'summary':''}
-
 # convert wikipedia responses to sentences 
+@cached
 def wiki_to_sentences(article:str)->list:
     # remove anything between brackets to deal with latex
     a = re.sub(r"\{.*\}", "", article).lower() 
@@ -228,24 +207,8 @@ def sample_output(path, n_samples):
         text = input.readlines()
         return sample(text, n_samples)
 
-# def explode_wiki_search(wikis, n_expansions:int=10):
-#     search_terms = []
-#     corpus = ""
-#     # extract summaries
-#     for w in wikis:
-#         if type(w) == wikipedia.wikipedia.WikipediaPage:
-#             corpus = corpus + ' ' + ' '.join(wiki_to_sentences(w.summary))
-
-#     # find most significant n-grams
-#     corpus = remove_words_by_length(remove_stop_words(corpus.strip()), 4).lower()
-#     collocs = get_collocations(corpus.split(' '))
-#     # use as search terms
-#     print('hi')
-#     # repeat until we have sufficient results
-
-def get_wiki_suggestions(search_terms:set, n_expand=10, verbose:bool=False):
-    # don't search the same thing multiple times
-    # search_set = search_set - searched_set
+@cached
+def get_wiki_suggestions(search_terms:set, n_expand:int=5, verbose:bool=True):
     if verbose:
         print(f'pre expanded search set {search_terms} for wikipedia')
     suggestions = set()
@@ -254,14 +217,19 @@ def get_wiki_suggestions(search_terms:set, n_expand=10, verbose:bool=False):
         result = wikipedia.search(term, results=n_expand)
         suggestions.update(x.lower() for x in result)
     
+    if verbose:
+        print(f'Suggestions are {suggestions}')
     return suggestions - search_terms
 
-def get_topics_from_summaries(summaries:list[str], collocation_results_coef):
+
+def get_topics_from_summaries(summaries:list[str], searched:set[str], n_collocs:int=3):
     # find most significant n-grams
     corpus = remove_words_by_length(remove_stop_words(' '.join(summaries).strip()), 4).lower()
-    collocs = [' '.join(c).lower() for c in get_collocations(corpus.split(' '))]
+    collocs = [remove_non_alpha(' '.join(c)).lower() for c in get_collocations(corpus.split(' '), n_collocs=n_collocs)]
+    # collocs = filter_by_similarity(collocs, searched, summaries)
     topics = set(collocs)
     return topics
+
 
 def get_wiki_content(search_terms:set, page:bool=False):
     summaries = []
@@ -269,125 +237,145 @@ def get_wiki_content(search_terms:set, page:bool=False):
         article = get_wiki_article(term, page)
         if len(article) > 0:
             summaries.append(' '.join(article))
-        # if use_pages:
-        #     summaries.append(wikipedia.page(term).content)
-        # else:
-        #     summaries.append(wikipedia.summary(term))
     return summaries
 
 # take a few ideas and blow them up into a corpus like a kid who loves dinosaurs
-def ramble_excitedly(topics:dict, n_topics:int=10, n_expand:int=3, max_tangents:int=100, verbose=False):
+# 2: n_expand 3, tangents 100
+# 3: n_expand: 10, tangents 300
+# 4: n_expand: 5, tangents 500
+
+def ramble_excitedly(topics:dict, n_topics:int=10, n_expand:int=3, max_tangents:int=2000, verbose=False):
     # TODO: move this logic somewhere else
-    n_t = n_topics if n_topics <= len(topics) else len(topics.keys)
+    n_t = n_topics if n_topics <= len(topics) else len(topics)
     s = sorted(topics, key=lambda x: topics[x]['count'], reverse=True)[:n_t]
     search_terms = set([' '.join(terms).lower() for terms in s])
 
+
     search_terms = get_wiki_suggestions(search_terms)
+    search_terms = filter_by_similarity([remove_non_alpha(t) for t in search_terms])
     searched = set()
     # if we've run out of material expand to using pages instead of summaries
     use_pages = False
     min_search_terms = 3
     # collocation_results_coef = 0.01
     # number of times we've run out of new topics
-    n_dead_ends = 0
+    n_dead_ends = 1
+    max_dead_ends = 3
+    original_expansion = n_expand
+    original_colloc_coef = 3
+    colloc_coef = 3
 
+    ramble_log = []
+    
     # we want a big number of search terms in the beginning, 
     # scaling also to the number of articles returned so it doesn't peter out
     # as i increases the results coefficient decreases
     # TODO: it would be better to use a true calculation of relevance than these assumptions
     max_tangents += 1
+    prev_search_terms = set()
     for i in range(1, max_tangents):
-        n_collocs = int(max_tangents / i*1.5) if int(max_tangents / i*1.5) > min_search_terms else min_search_terms
-
-        summaries = get_wiki_content(search_terms, use_pages)
-
+        # n_collocs = int(max_tangents / i*1.5) if int(max_tangents / i*1.5) > min_search_terms else min_search_terms
+        # n_collocs = int(max_tangents / i*1.5) if int(max_tangents / i*1.5) > min_search_terms else min_search_terms
+        n_collocs = int(3*np.log(i+1))
+        summaries =  get_wiki_content(search_terms, use_pages)
         searched.update(search_terms)
-        new_topics = get_topics_from_summaries(summaries, n_collocs)
+        new_topics = get_topics_from_summaries(summaries, searched, n_collocs)
         nlp_search_terms = new_topics - searched
+        
         search_terms = get_wiki_suggestions(search_terms=nlp_search_terms, n_expand=n_expand)
+        # print(search_terms)
         if verbose:
-            print(f'Expanded search set {search_terms} for wikipedia')
-        if len(search_terms) < min_search_terms:
-            use_pages = True
+            ramble_log.append((n_dead_ends, n_collocs, nlp_search_terms, search_terms-searched))
+            print(nlp_search_terms)
+
+        if len(search_terms - prev_search_terms) == 0:
+            # we're stuck!  
+            print(f'We\'re stuck!  n_expand = {n_expand} n_dead_ends = {n_dead_ends} \n search terms: {search_terms}')
+            n_dead_ends += 1
+            n_expand += 1
+            # n_expand = int(n_expand * n_dead_ends)
+            colloc_coef += 1
+            
+        else: 
             if verbose:
-                print(f'Using pages for expanded wikipedia search at {i} iterations')
-            if len(search_terms) == 0:
-                # reprocess
-                search_terms = searched
-                # increase the number of results we want from wikipedia
-                n_expand += 1
-                n_dead_ends += 1
-                # collocation_results_coef /= n_dead_ends
-                if verbose:    
-                    print(f'Ran out of steam at {i} iterations. Reprocessing with wikipedia suggestions at {n_expand}')
-        # TODO: check for document similarity
+                print(f'Unstuck n_expand = {n_expand} n_dead_ends = {n_dead_ends}')
+            n_expand = original_expansion
+            colloc_coef = original_colloc_coef
+            if n_dead_ends >= max_dead_ends:
+                # parse whole articles
+                use_pages = True
+                n_dead_ends = 0
+            else: 
+                use_pages = False
+        
+        prev_search_terms = search_terms
+        
+        # if verbose:
+        #     print(f'Expanded search set {search_terms} for wikipedia')
+        # if len(search_terms) < min_search_terms:
+        #     use_pages = True
+        #     if verbose:
+        #         print(f'Using pages for expanded wikipedia search at {i} iterations')
+        #     if len(search_terms) == 0:
+        #         # reprocess
+        #         search_terms = searched
+        #         # increase the number of results we want from wikipedia
+        #         n_expand += 1
+        #         n_dead_ends += 1
+        #         # collocation_results_coef /= n_dead_ends
+        #         if verbose:    
+        #             print(f'Ran out of steam at {i} iterations. Reprocessing with wikipedia suggestions at {n_expand}')
+    if verbose:
+        log_df = pd.DataFrame({'ramble_log': ramble_log})
+        log_df.to_pickle(f'./ramble_log_{datetime.now.strftime("%Y%m%d_%H%M")}.pkl')
 
     return search_terms    
 
 def sanitize_filename(filename):
     return re.sub(" ", "_", remove_non_alpha(filename).strip())    
-        
-    # expand topics from summaries n-times
+
+def have_wiki_article(search_term:str, page:bool=True)->bool:
+    w_type = "article" if page else "summarie"
+    localpath = f'./{w_type}s/{sanitize_filename(search_term)}.txt'
+    return Path(localpath).is_file()
+
+
 def get_wiki_article(search_term:str, page:bool=True, verbose:bool=False)->list[str]:
-    localpath = f'./{"articles" if page else "summaries"}/{sanitize_filename(search_term)}.txt'
+    # TODO: combine sentence and article code
+    w_type = "article" if page else "summarie"
+    localpath = f'./{w_type}s/{sanitize_filename(search_term)}.txt'
     # filename = sanitize_filename(search_term)
-    if page:
-        if verbose:
-            print(f'Attempting to retrieve article for {search_term}')
-        # path = Path(f'/articles/{filename}.txt')
-        if Path(localpath).is_file():
-            with open(localpath, mode='r', encoding='utf-8') as file:
-                if verbose:
-                    print(f'Loaded article for {search_term}')
-                return file.read()
-        else:
-            try:
-                article = wikipedia.page(search_term).content
-                article = ' '.join(wiki_to_sentences(article))
-                with open(localpath, mode='w', encoding='utf-8') as file:
-                    if verbose:
-                        print(f'Saved article for {search_term}')
-                    file.write(article)
-                return article
-            except:
-                return ''
-    else:
-        if verbose:
-            print(f'Attempting to retrieve summary for {search_term}')
-        # path = Path(f'/summaries/{filename}.txt')
-        if Path(localpath).is_file():
-            with open(localpath, mode='r', encoding='utf-8') as file:
-                if verbose:
-                    print(f'Loaded summary for {search_term}')
-                return file.read()
-        try:
-            summary = wikipedia.summary(search_term)
-            summary = ' '.join(wiki_to_sentences(summary))
-            with open(localpath, mode='w', encoding='utf-8') as file:
-                file.write(summary)
-            if verbose:    
-                print(f'Saved summary for {search_term}')
-            return summary
-        except:
+    # if page:
+
+    if verbose:
+        print(f'Attempting to retrieve article for {search_term}')
+    # path = Path(f'/articles/{filename}.txt')
+    if Path(localpath).is_file():
+        with open(localpath, mode='r', encoding='utf-8') as file:
             if verbose:
-                print(f'Failed to retrieve summary for {search_term}')
+                print(f'Loaded {w_type} for {search_term}')
+            return [re.sub('\n', ' ', s) for s in file.readlines() if len(s) > 2]
+    else:
+        try:
+            if page:
+                article = wikipedia.page(search_term).content
+            else:
+                    article = wikipedia.summary(search_term)
+            article = wiki_to_sentences(article)
+            with open(localpath, mode='w', encoding='utf-8') as file:
+                if verbose:
+                    print(f'Saved {w_type} for {search_term}')
+                for sentence in article:
+                    file.write(f'\n{sentence}')
+            return article
+        except:
             return ''
 
-# def get_wiki_articles(search_terms)->Iterator:
-#     for t in search_:
-#         try:
-#             response = wikipedia.page(t)
-#             # yield response.content
-#             yield response
-#         except:
-#             print(f'no wiki for {t}')
-#             # yield ''
-#             yield {'content': '', 'summary':''}
 
 # takes a video path (such as myvid.mp4), extracts text from the video, and builds a scorer of single line 
 # - sentences it thinks are related to the video 
 def build_scorer(vid_path:str):
-    wikipedia.set_rate_limiting(rate_limit=True, min_wait=datetime.timedelta(0, 0, 1000000))
+    wikipedia.set_rate_limiting(rate_limit=True, min_wait=datetime.timedelta(0, 0, 100000))
     outpath = f'{vid_path}_sentences.txt'
     
     try:
@@ -397,48 +385,16 @@ def build_scorer(vid_path:str):
         text_df = pd.DataFrame({'text': text})
         text_df.to_pickle(f'./img_to_txt_{vid_path}.pkl')
 
-    topics = get_topics(text_df['text'])
-    # # t = get_topics_over_mean(t)
-    # try:
-    #     wikis = pd.read_pickle(f'./wiki_df.pkl')['wikis']
-    # except:
-    #     wikis = get_wiki_articles(t)
-    #      # TODO: delete me
-    #     wiki_df = pd.DataFrame({'wikis': wikis})
-    #     wiki_df.to_pickle('wiki_df.pkl')
+    ocr_topics = get_topics_from_ocr_text(text_df['text'])
+    ocr_topics = get_topics_over_mean(ocr_topics)
+    # ocr_topics = filter_by_similarity([remove_non_alpha(' '.join(t)).lower() for t in ocr_topics])
+    search_terms = ramble_excitedly(ocr_topics, verbose=True)
     
-    # print(type(wikis))
-    # explode_wiki_search(wikis)
-    search_terms = ramble_excitedly(topics)
     log(vid_path + ': ' + ', '.join(search_terms), 'search_terms')
     with open(outpath, mode='a+', encoding='utf-8') as file:
         for term in search_terms:
             article = get_wiki_article(term)
             for sentence in article:
                 file.write(f'\n{sentence}')
-
-    # for a in wikis:
-    #     if type(a) == wikipedia.wikipedia.WikipediaPage:
-    #     # if len(a['content']) > 0: 
-    #         with open(outpath, mode='a+', encoding='utf-8') as file:
-    #             sentences = wiki_to_sentences(a.content) 
-    #             for s in sentences:
-    #                 file.write(f'\n{s}')
-    #         # with open('categories.txt', mode='a+', encoding='utf-8') as file:
-    #         #     # sentences = wiki_to_sentences(a.categories) 
-    #         #     file.write(f'\n{"-"*50}\n\n')
-    #         #     for s in a.categories:
-    #         #         file.write(f'\n{s}')
-    #         # with open('sections.txt', mode='a+', encoding='utf-8') as file:
-    #         #     file.write(f'\n{"-"*50}\n\n')
-    #         #     # sentences = wiki_to_sentences(a.sections) 
-    #         #     for s in a.sections:
-    #         #         file.write(f'\n{s}')
-    #         # with open('summaries.txt', mode='a+', encoding='utf-8') as file:
-    #         #     file.write(f'\n{"-"*50}\n\n')
-    #         #     sentences = wiki_to_sentences(a.summary) 
-    #         #     for s in sentences:
-    #         #         file.write(f'\n{s}')
-
 
     print(f'sample output is {sample_output(outpath, 10)}')
