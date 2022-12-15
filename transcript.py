@@ -84,6 +84,7 @@ class Transcript:
             file.write(text)
             print(f'saved transript file as {path}.txt')
 
+# Run to get transcripts you can manually fix
 def prep_coqui(vid_path, clip_dur:int=15):
     regex = re.compile(r'[^a-zA-Z\s]')
     transcript = Transcript(vid_path)
@@ -143,36 +144,17 @@ def build_coqui_df(start, end, clip_dur, name):
         
 # _________________________________________________________
 # 
-# to get a dataframe for coqui training
+# to get a dataframe for coqui training/transcripts to fix
 # prep_coqui('1_PCA.mp4')
+# 
+# after manually fixing transcripts
 # cq_df = build_coqui_df(0, 1380, 15, '1_PCAwav')
 # 
-# to get an array of frames from a video
-# bleh = get_text_from_frames('1_PCA.mp4', 0, 120)
-# pd.DataFrame({'bleh': bleh}).to_pickle('./img_to_txt.pkl')
-# 
-# To get sentences for scorer generation
-# t = get_topics(bleh['bleh'])
-# wikis = get_wiki_articles(t)
-# 
+# then run build_scorer('<vid path>') for a scorer file
 
-if __name__ == "__main__":
-    start_time = timeit.default_timer()
-    # prep_coqui('1_PCA.mp4')
-    # cq_df = build_coqui_df(0, 1380, 15, '1_PCAwav')
-    
-    # bleh = get_text_from_frames('1_PCA.mp4',0)
-    # pd.DataFrame({'bleh': bleh}).to_pickle('./img_to_txt_PCA_full.pkl')
+# if __name__ == "__main__":
+#     start_time = timeit.default_timer()
 
-    build_scorer('1_PCA.mp4')
+#     build_scorer('1_PCA.mp4')
 
-    # v = Video('1_PCA.mp4')
-    # v.get_audio_subclip(0, 99999999999999)
-    # v.get_clip()
-    
-    # t = Transcript(v.get_clip())
-    # t = Transcript('section1.mp4')
-
-    # t = Transcript('1_PCA.mp4')
-    # t.save_transcript("raw_transcript")
-    print(f'time is {timeit.default_timer() - start_time}')
+#     print(f'time is {timeit.default_timer() - start_time}')

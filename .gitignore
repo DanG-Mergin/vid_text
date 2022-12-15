@@ -133,7 +133,12 @@ dmypy.json
 *.wav
 clips/*
 *.txt
+*.pkl
+*.pdf
+*.png
+*.zip
 
-# Models
+# folders
 /vosk_models
 /models*
+deprecated/
