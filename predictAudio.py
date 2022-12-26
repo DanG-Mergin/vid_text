@@ -62,64 +62,63 @@ from imageToText import (
 )
 
 
-def clean_ocr_text(corpus: list[list[str]]) -> list[str]:
-    # TODO: need to add time stamps and ensure that line order is being preserved
-    corpus_list = [re.sub(r"\n+", "\n", d).split("\n") for d in corpus if len(d) > 0]
-
-    # removelines with words specific to user interfaces, powerpoint, slides,
+def clean_ocr_text(corpus: list[(float, list[str])]) -> list[(float, list[str])]:
     corpus_list = [
-        [
-            remove_words_by_length(remove_non_alpha(line))
-            for line in doc
-            if not has_flagged_word(remove_non_alpha(line), 1)
-            and not has_flagged_symbol(line)
-        ]
-        for doc in corpus_list
+        (frame[0], re.sub(r"\n+", "\n", frame[1]).split("\n"))
+        for frame in corpus
+        if len(frame[1]) > 0
     ]
 
     corpus_list = [
-        [line.strip().lower() for line in doc if len(line) > 0] for doc in corpus_list
+        (
+            frame[0],
+            [
+                remove_words_by_length(remove_non_alpha(line))
+                for line in frame[1]
+                if not has_flagged_word(remove_non_alpha(line), 1)
+                and not has_flagged_symbol(line)
+            ],
+        )
+        for frame in corpus_list
     ]
-    # corpus_list = [remove_words_by_length(remove_non_alpha(d)) for d in corpus_list]
+
+    corpus_list = [
+        (frame[0], [line.strip().lower() for line in frame[1] if len(line) > 0])
+        for frame in corpus_list
+    ]
 
     return corpus_list
 
 
-def remove_non_dict(corpus: list[list[str]], words: list[str]) -> list[list[str]]:
+def remove_non_dict(
+    corpus: list[(float, list[str])], words: list[str]
+) -> list[(float, list[str])]:
     # creates list of documents, with lists of lines, with lists of words on each line
-    corpus_list = [[word_tokenize(line) for line in doc] for doc in corpus]
     corpus_list = [
-        [[w for w in line if w in words] for line in doc] for doc in corpus_list
+        (frame[0], [word_tokenize(line) for line in frame[1]]) for frame in corpus
+    ]
+    corpus_list = [
+        (frame[0], [[w for w in line if w in words] for line in frame[1]])
+        for frame in corpus_list
     ]
     return corpus_list
 
 
-def get_words_from_ocr_text(corpus: list, dict_path: str) -> dict:
+def get_words_from_ocr_text(corpus: list[(float, list[str])], dict_path: str) -> dict:
     corpus_list = clean_ocr_text(corpus)
-    with open(f"./{dict_path}", mode="r", encoding="utf-8") as input:
-        words = input.read()
-
-    # words = remove_non_alpha(words).strip()
-    words = word_tokenize(remove_stop_words(words))
-
-    corpus_list = remove_non_dict(corpus_list, words)
-    # word_list = []
+    try:
+        with open(f"./{dict_path}", mode="r", encoding="utf-8") as input:
+            words = input.read()
+            assert (
+                len(words) > 0
+            ), f'\n{"-"*50}\nWARNING!\nA text file with all words generated for the video must be provided.\nNo hotwords will be used to improve transcription \n{"-"*50}\n'
+            words = word_tokenize(remove_stop_words(words))
+            corpus_list = remove_non_dict(corpus_list, words)
+    except AssertionError as e:
+        print(e)
+        # TODO: log and look more into exceptions
+        # TODO: consider exiting program
     return corpus_list
-    # find n-grams/collocations
-    # all_slides = remove_words_by_length(remove_stop_words(remove_non_alpha('.'.join([' '.join(d) for d in corpus_list])))).lower()
-    # collocs = get_collocations(all_slides.split(' '), n_collocs=40)
-
-    # # compare against sentences from the top of the image (favoring topic headings and sub headings)
-    # topic_count_dict = {}
-    # for c in collocs:
-    #     for d in [d[0:5] for d in corpus_list]:
-    #         if re.search(' '.join(c), ' '.join(d).lower()):
-    #             if c in topic_count_dict:
-    #                 topic_count_dict[c]['count'] += 1
-    #             else:
-    #                 topic_count_dict[c] = {'count': 1}
-    #                 # topic_count_dict[c]['count'] = 1
-    # return topic_count_dict
 
 
 def get_hotwords(vid_path: str, dict_path: str):
@@ -130,7 +129,6 @@ def get_hotwords(vid_path: str, dict_path: str):
         text_df = pd.DataFrame({"text": text})
         text_df.to_pickle(f"./img_to_txt_{vid_path}.pkl")
 
-    # TODO: enhance tesseract word recognition using generated dictionary
     ocr_words = get_words_from_ocr_text(text_df["text"], dict_path)
 
     return ocr_words
@@ -139,4 +137,5 @@ def get_hotwords(vid_path: str, dict_path: str):
 if __name__ == "__main__":
     start_time = timeit.default_timer()
     get_hotwords(vid_path="1_PCA.mp4", dict_path="1_PCA.mp4_sentences.txt")
+
     print(f"time is {timeit.default_timer() - start_time}")
