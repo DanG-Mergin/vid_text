@@ -123,7 +123,6 @@ def get_words_from_ocr_text(corpus: list, dict_path: str) -> dict:
 
 
 def get_hotwords(vid_path: str, dict_path: str):
-    text = get_text_from_frames(vid_path, 0)
     try:
         text_df = pd.read_pickle(f"./img_to_txt_{vid_path}.pkl")
     except:
