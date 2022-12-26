@@ -66,6 +66,8 @@ def has_flagged_word(words, threshold=2):
         "svg",
         "doc",
         "docx",
+        "https",
+        "http",
     }
     interface = {
         "file",
@@ -115,10 +117,10 @@ def remove_non_alpha(document):
     return regex.sub(" ", document)
 
 
-def get_text_from_frames(vid_path: str, start: float, end: float = None):
+def get_text_from_frames(vid_path: str, start: float, end: float = None, fpm: int = 2):
     vid = Video(vid_path)
     end = vid.duration if end is None else end
-    frames_iter = vid.get_frames(start, end, fpm=2)
+    frames_iter = vid.get_frames(start, end, fpm)
 
     # path to tesseract.exe
     pt.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract"

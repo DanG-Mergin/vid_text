@@ -104,7 +104,9 @@ def remove_non_dict(
     return corpus_list
 
 
-def get_words_from_ocr_text(corpus: list[(float, list[str])], dict_path: str) -> dict:
+def get_words_from_ocr_text(
+    corpus: list[(float, list[str])], dict_path: str
+) -> list[(float, list[str])]:
     corpus_list = clean_ocr_text(corpus)
     try:
         with open(f"./{dict_path}", mode="r", encoding="utf-8") as input:
@@ -121,21 +123,69 @@ def get_words_from_ocr_text(corpus: list[(float, list[str])], dict_path: str) ->
     return corpus_list
 
 
+def compress_to_time_range(
+    corpus: list[(float, list[str])]
+) -> tuple[list[float], list[list[str]]]:
+    # half_open ranges for binary search representing the start time of slides
+    slide_start_times = []
+    slide_text = []
+    start = 0
+    for i, frame in enumerate(corpus):
+        if i + 1 < len(corpus):
+            if frame[1] == corpus[i + 1][1]:
+                continue
+            else:
+                slide_start_times.append(start)
+                slide_text.append(frame[1])
+                start = corpus[i + 1][0]
+        else:
+            slide_start_times.append(start)
+            slide_text.append(frame[1])
+
+    return (slide_start_times, slide_text)
+
+
+def get_hotwords_by_time(
+    start: float, end: float, slides_by_time: tuple[list[float], list[list[str]]]
+):
+    # note: last index returned will be outside of the range even if end = value at last index
+    # - however I'm keeping them for now as the resolution is set at 15 seconds
+    indices = np.searchsorted(slides_by_time[0], [start, end], side="left")
+    slides = slides_by_time[1][indices[0] : indices[-1]]
+    return (indices, slides)
+
+
 def get_hotwords(vid_path: str, dict_path: str):
     try:
         text_df = pd.read_pickle(f"./img_to_txt_{vid_path}.pkl")
     except:
-        text = get_text_from_frames(vid_path, 0)
+        text = get_text_from_frames(vid_path, 0, fpm=4)
         text_df = pd.DataFrame({"text": text})
         text_df.to_pickle(f"./img_to_txt_{vid_path}.pkl")
 
-    ocr_words = get_words_from_ocr_text(text_df["text"], dict_path)
+    # ocr_words = get_words_from_ocr_text(text_df["text"], dict_path)
+    # slides_by_time = compress_to_time_range(ocr_words)
+    # ocr_words = get_words_from_ocr_text(text_df["text"], dict_path)
 
-    return ocr_words
+    # TODO: move this process to the beginning for efficiency
+    try:
+        slides_by_time_df = pd.read_pickle(f"./slides_by_time_{vid_path}.pkl")
+        slides_by_time = (slides_by_time_df["time"], slides_by_time_df["slides"])
+    except:
+        ocr_words = get_words_from_ocr_text(text_df["text"], dict_path)
+        slides_by_time = compress_to_time_range(ocr_words)
+        slides_by_time_df = pd.DataFrame(
+            {"time": slides_by_time[0], "slides": slides_by_time[1]}
+        )
+        slides_by_time_df.to_pickle(f"./slides_by_time_{vid_path}.pkl")
+
+    return slides_by_time
 
 
 if __name__ == "__main__":
     start_time = timeit.default_timer()
-    get_hotwords(vid_path="1_PCA.mp4", dict_path="1_PCA.mp4_sentences.txt")
-
+    slides_by_time = get_hotwords(
+        vid_path="1_PCA.mp4", dict_path="1_PCA.mp4_sentences.txt"
+    )
+    hw = get_hotwords_by_time(0, 160, slides_by_time)
     print(f"time is {timeit.default_timer() - start_time}")
