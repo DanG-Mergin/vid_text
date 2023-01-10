@@ -188,4 +188,7 @@ if __name__ == "__main__":
         vid_path="1_PCA.mp4", dict_path="1_PCA.mp4_sentences.txt"
     )
     hw = get_hotwords_by_time(0, 160, slides_by_time)
+    # TODO: experiment with
+    #   - getting the top ranked wikipedia article for a time frame,
+    #   - then grabbing adjacent words around what's on the slides
     print(f"time is {timeit.default_timer() - start_time}")

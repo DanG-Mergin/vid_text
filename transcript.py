@@ -140,7 +140,7 @@ def build_coqui_df(start, end, clip_dur, name):
             "transcript": transcript,
         }
     )
-    print(df.head())
+    # print(df.head())
 
     df.to_csv(f"coqui_train_PCA_1_{start}_{end}", sep=",", encoding="utf-8")
     # there is one extra comma in the header... hacky fix
